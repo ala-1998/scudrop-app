@@ -1,0 +1,6 @@
+{
+  "name": "Scudrop",
+  "description": "Single-dashboard order, expense, and client management system with real-time currency conversion and TND profit tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <!-- Brand subtle radial depth for the electric cobalt blue disc -->
+    <radialGradient id="scudropBlue" cx="40%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#0026e6" />
+      <stop offset="60%" stop-color="#001cd6" />
+      <stop offset="100%" stop-color="#0014b8" />
+    </radialGradient>
+    <filter id="subtleGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Outer Dark Rim -->
+  <circle cx="100" cy="100" r="98" fill="#0f1523" />
+  
+  <!-- Primary Electric Cobalt Blue Circle -->
+  <circle cx="100" cy="100" r="92" fill="url(#scudropBlue)" />
+
+  <!-- "FR" Country Identifier Badge -->
+  <text 
+    x="166" 
+    y="56" 
+    fill="#ffffff" 
+    font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+    font-weight="700" 
+    font-size="20" 
+    letter-spacing="0.5"
+    text-anchor="end"
+  >FR</text>
+
+  <!-- Geometric Interlocking Monogram "S" in Crisp White -->
+  <g id="scudrop-monogram" filter="url(#subtleGlow)">
+    <!-- Top Chamfered Angular Ribbon -->
+    <path
+      d="M 80 48
+         L 134 48
+         L 156 70
+         L 136 90
+         L 118 90
+         L 118 72
+         L 88 72
+         L 58 102
+         L 58 126
+         L 46 114
+         L 46 84
+         Z"
+      fill="#f4f6fa"
+    />
+
+    <!-- Bottom Chamfered Angular Ribbon (Point-symmetric 180° Inversion) -->
+    <path
+      d="M 120 152
+         L 66 152
+         L 44 130
+         L 64 110
+         L 82 110
+         L 82 128
+         L 112 128
+         L 142 98
+         L 142 74
+         L 154 86
+         L 154 116
+         Z"
+      fill="#f4f6fa"
+    />
+
+    <!-- Central White Core Square -->
+    <rect x="84" y="84" width="32" height="32" fill="#ffffff" />
+
+    <!-- Upper-Right Accent Cobalt Square Cutout -->
+    <rect x="116" y="66" width="26" height="24" fill="#001cd6" />
+
+    <!-- Lower-Left Accent Cobalt Square Cutout -->
+    <rect x="58" y="110" width="26" height="24" fill="#001cd6" />
+  </g>
+</svg>
