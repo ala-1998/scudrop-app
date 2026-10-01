@@ -51,7 +51,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
 
   // Financial inputs (EUR + Rates)
   const [invoicedPriceForeign, setInvoicedPriceForeign] = useState<number | string>(0);
-  const [invoicedPriceRate, setInvoicedPriceRate] = useState<number | string>(3.35);
+  const [invoicedPriceRate, setInvoicedPriceRate] = useState<number | string>(4.5);
 
   const [spentPriceForeign, setSpentPriceForeign] = useState<number | string>(0);
   const [spentPriceRate, setSpentPriceRate] = useState<number | string>(3.35);
@@ -95,7 +95,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
       );
       setDeliveryStatus(orderToEdit.deliveryStatus || 'En cours de livraison');
       setInvoicedPriceForeign(orderToEdit.invoicedPriceForeign ?? 0);
-      setInvoicedPriceRate(orderToEdit.invoicedPriceRate ?? 3.35);
+      setInvoicedPriceRate(orderToEdit.invoicedPriceRate ?? 4.5);
       setSpentPriceForeign(orderToEdit.spentPriceForeign ?? 0);
       setSpentPriceRate(orderToEdit.spentPriceRate ?? 3.35);
       setTransportForeign(orderToEdit.transportForeign ?? 0);
@@ -113,7 +113,7 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
       setOrderDate(new Date().toISOString().split('T')[0]);
       setDeliveryStatus('En cours de livraison');
       setInvoicedPriceForeign(0);
-      setInvoicedPriceRate(3.35);
+      setInvoicedPriceRate(4.5);
       setSpentPriceForeign(0);
       setSpentPriceRate(3.35);
       setTransportForeign(0);
@@ -216,14 +216,16 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* ═══════════════════════════════════════════════════════════
-            HEADER — Hero sombre
+            HEADER — Hero sombre (FIX shrink-0 pour éviter compression)
         ═══════════════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white">
+        <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white">
+          {/* Décors lumineux */}
           <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
 
           <div className="relative flex items-start justify-between gap-4 px-6 py-5">
-            <div className="flex items-start gap-3.5 min-w-0">
+            <div className="flex items-start gap-3.5 min-w-0 flex-1">
+              {/* Icône */}
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
                 {orderToEdit ? (
                   <FileText className="w-5 h-5" />
@@ -231,23 +233,24 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                   <Sparkles className="w-5 h-5" />
                 )}
               </div>
-              <div className="min-w-0">
+
+              {/* Titre + sous-titre */}
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base font-bold text-white">
-                    {orderToEdit
-                      ? 'Modifier la commande'
-                      : 'Nouvelle commande'}
+                  <h2 className="text-base font-bold text-white leading-tight">
+                    {orderToEdit ? 'Modifier la commande' : 'Nouvelle commande'}
                   </h2>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 shrink-0">
                     {orderToEdit ? 'Édition' : 'Création'}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-400 mt-1 leading-snug">
                   Renseignez les détails et les montants — les calculs TND sont instantanés
                 </p>
               </div>
             </div>
 
+            {/* Bouton fermer */}
             <button
               id="order-modal-close"
               onClick={onClose}
@@ -449,7 +452,6 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {/* Facturé */}
               <FinancialBlock
                 step="1"
                 title="Prix Facturé Client"
@@ -462,7 +464,6 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                 totalTND={calcInvoicedTND}
               />
 
-              {/* Dépensé */}
               <FinancialBlock
                 step="2"
                 title="Prix Dépensé Achat"
@@ -475,7 +476,6 @@ export const OrderFormModal: React.FC<OrderFormModalProps> = ({
                 totalTND={calcSpentTND}
               />
 
-              {/* Transport */}
               <FinancialBlock
                 step="3"
                 title="Transport Facturé"
