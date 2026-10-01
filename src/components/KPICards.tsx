@@ -10,37 +10,32 @@ import {
   Users,
   Wallet,
   Coins,
-  ArrowRight,
-  Equal,
   Minus,
+  Equal,
+  ArrowDownRight,
+  ArrowUpRight,
 } from 'lucide-react';
 import { GlobalKPIs } from '../types';
 
 interface KPICardsProps {
   kpis: GlobalKPIs;
   periodLabel?: string;
-  /** Taux € -> TND utilisé pour afficher l'équivalent en euros (par défaut 3.35) */
-  exchangeRate?: number;
 }
 
-export const KPICards: React.FC<KPICardsProps> = ({ kpis, periodLabel, exchangeRate = 3.35 }) => {
-  const formatTND = (val: number) => {
-    return new Intl.NumberFormat('fr-TN', {
+export const KPICards: React.FC<KPICardsProps> = ({ kpis, periodLabel }) => {
+  const formatTND = (val: number) =>
+    new Intl.NumberFormat('fr-TN', {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
     }).format(val || 0);
-  };
 
-  const formatEUR = (val: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+  const formatEUR = (val: number) =>
+    new Intl.NumberFormat('fr-FR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(val || 0);
-  };
 
-  const toEUR = (tndVal: number) => (exchangeRate > 0 ? (tndVal || 0) / exchangeRate : 0);
-
-  // Comprehensive Financial Totals
+  // ── Calculs financiers ─────────────────────────────────────────
   const invoicedArticles = kpis.totalInvoicedTND || 0;
   const invoicedTransport = kpis.totalTransportTND || 0;
   const totalBilledToClient = invoicedArticles + invoicedTransport;
@@ -59,386 +54,486 @@ export const KPICards: React.FC<KPICardsProps> = ({ kpis, periodLabel, exchangeR
       ? ((netGain / totalBilledToClient) * 100).toFixed(1)
       : '0.0';
 
-  const totalAdvances = kpis.totalAdvancesTND ?? 0;
-  const totalRemaining = kpis.totalRemainingTND ?? 0;
+  const isPositive = netGain >= 0;
 
   return (
-    <div className="space-y-4">
-      {/* 1. MASTER FINANCIAL FORMULA BANNER */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 text-white rounded-2xl p-5 shadow-md border border-slate-700/60">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-700/50">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Synthèse Financière Globale {periodLabel ? `(${periodLabel})` : ''}
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-400">
-            Formule : Total Facturé (Articles + Transport) − Total Dépensé (Achats + Frais) = Gain Net
-          </span>
-        </div>
+    <div className="space-y-5">
+      {/* ═══════════════════════════════════════════════════════════
+          1. HERO — SYNTHÈSE FINANCIÈRE
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 border border-slate-800 shadow-xl">
+        {/* Décoration de fond */}
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-11 gap-3 items-center">
-          {/* Box 1: TOTAL FACTURÉ */}
-          <div className="lg:col-span-4 bg-white/10 rounded-xl p-4 border border-white/10 backdrop-blur-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-200">
-                1. Total Facturé Client
+        <div className="relative p-6 sm:p-8">
+          {/* En-tête */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
               </span>
-              <span className="text-[10px] bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded-full font-semibold">
-                Recettes
-              </span>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-white mt-1">
-              {formatTND(totalBilledToClient)}{' '}
-              <span className="text-xs font-normal text-blue-200">TND</span>
-            </div>
-            <div className="text-[11px] text-blue-300/90 font-semibold mt-0.5">
-              ≈ {formatEUR(toEUR(totalBilledToClient))} €
-            </div>
-
-            <div className="mt-2 pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-[11px]">
-              <div className="bg-white/5 rounded-lg px-2.5 py-1">
-                <span className="text-slate-400 block text-[10px]">Prix Facturé Articles</span>
-                <strong className="text-white font-bold block">{formatTND(invoicedArticles)} TND</strong>
-                <span className="text-blue-300/80 text-[10px]">≈ {formatEUR(toEUR(invoicedArticles))} €</span>
-              </div>
-              <div className="bg-white/5 rounded-lg px-2.5 py-1">
-                <span className="text-slate-400 block text-[10px]">Transport Facturé</span>
-                <strong className="text-sky-300 font-bold block">{formatTND(invoicedTransport)} TND</strong>
-                <span className="text-sky-300/80 text-[10px]">≈ {formatEUR(toEUR(invoicedTransport))} €</span>
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-white">
+                  Synthèse Financière
+                </h2>
+                {periodLabel && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">{periodLabel}</p>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Minus Operator */}
-          <div className="hidden lg:flex lg:col-span-1 justify-center items-center">
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-300">
-              <Minus className="w-4 h-4 font-bold" />
+            <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 backdrop-blur-sm">
+              Facturé − Dépensé = Gain Net
             </div>
           </div>
 
-          {/* Box 2: TOTAL DÉPENSÉ */}
-          <div className="lg:col-span-4 bg-white/10 rounded-xl p-4 border border-white/10 backdrop-blur-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-200">
-                2. Total Dépensé (Coûts)
-              </span>
-              <span className="text-[10px] bg-rose-500/30 text-rose-200 px-2 py-0.5 rounded-full font-semibold">
-                Dépenses
-              </span>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-white mt-1">
-              {formatTND(totalSpentAll)}{' '}
-              <span className="text-xs font-normal text-rose-200">TND</span>
-            </div>
-            <div className="text-[11px] text-rose-300/90 font-semibold mt-0.5">
-              ≈ {formatEUR(toEUR(totalSpentAll))} €
-            </div>
-
-            <div className="mt-2 pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-[11px]">
-              <div className="bg-white/5 rounded-lg px-2.5 py-1">
-                <span className="text-slate-400 block text-[10px]">Dépenses Commandes</span>
-                <strong className="text-white font-bold block">{formatTND(spentOrders)} TND</strong>
-                <span className="text-rose-300/80 text-[10px]">≈ {formatEUR(toEUR(spentOrders))} €</span>
+          {/* Flow : Facturé − Dépensé = Gain */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 lg:gap-3 items-stretch">
+            {/* ── CARTE 1 : FACTURÉ ───────────────────────── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-600/5 border border-blue-400/20 p-5 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-200">
+                  Total Facturé
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-blue-300" />
               </div>
-              <div className="bg-white/5 rounded-lg px-2.5 py-1">
-                <span className="text-slate-400 block text-[10px]">Frais Généraux</span>
-                <strong className="text-rose-300 font-bold block">{formatTND(spentExpenses)} TND</strong>
-                <span className="text-rose-300/80 text-[10px]">≈ {formatEUR(toEUR(spentExpenses))} €</span>
+              <div className="text-3xl font-black tracking-tight text-white leading-none">
+                {formatTND(totalBilledToClient)}
+                <span className="text-sm font-semibold text-blue-200 ml-1.5">TND</span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white/5 px-2.5 py-1.5">
+                  <div className="text-[9px] uppercase font-semibold text-slate-400 tracking-wide">
+                    Articles
+                  </div>
+                  <div className="text-xs font-bold text-white mt-0.5">
+                    {formatTND(invoicedArticles)}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-white/5 px-2.5 py-1.5">
+                  <div className="text-[9px] uppercase font-semibold text-slate-400 tracking-wide">
+                    Transport
+                  </div>
+                  <div className="text-xs font-bold text-sky-300 mt-0.5">
+                    {formatTND(invoicedTransport)}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Equal Operator */}
-          <div className="hidden lg:flex lg:col-span-1 justify-center items-center">
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-300">
-              <Equal className="w-4 h-4 font-bold" />
+            {/* ── OPÉRATEUR − ────────────────────────────── */}
+            <div className="hidden lg:flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300">
+                <Minus className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Big Net Result Callout Banner */}
-        <div className="mt-4 pt-3 border-t border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/5 rounded-xl px-4 py-3">
-          <div className="flex items-center gap-3">
+            {/* ── CARTE 2 : DÉPENSÉ ───────────────────────── */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-rose-500/15 to-rose-600/5 border border-rose-400/20 p-5 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-200">
+                  Total Dépensé
+                </span>
+                <ArrowDownRight className="w-4 h-4 text-rose-300" />
+              </div>
+              <div className="text-3xl font-black tracking-tight text-white leading-none">
+                {formatTND(totalSpentAll)}
+                <span className="text-sm font-semibold text-rose-200 ml-1.5">TND</span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white/5 px-2.5 py-1.5">
+                  <div className="text-[9px] uppercase font-semibold text-slate-400 tracking-wide">
+                    Achats
+                  </div>
+                  <div className="text-xs font-bold text-white mt-0.5">
+                    {formatTND(spentOrders)}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-white/5 px-2.5 py-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] uppercase font-semibold text-slate-400 tracking-wide">
+                      Frais
+                    </span>
+                    {kpis.totalExpensesEUR !== undefined && (
+                      <span className="text-[9px] text-amber-300 font-bold font-mono">
+                        {formatEUR(kpis.totalExpensesEUR)}€
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs font-bold text-rose-300 mt-0.5">
+                    {formatTND(spentExpenses)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── OPÉRATEUR = ────────────────────────────── */}
+            <div className="hidden lg:flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300">
+                <Equal className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* ── CARTE 3 : GAIN NET ─────────────────────── */}
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${
-                netGain >= 0 ? 'bg-emerald-500' : 'bg-red-500'
+              className={`relative rounded-2xl p-5 backdrop-blur-sm border ${
+                isPositive
+                  ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/5 border-emerald-400/30'
+                  : 'bg-gradient-to-br from-red-500/20 to-red-600/5 border-red-400/30'
               }`}
             >
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300 block">
-                3. Résultat & Gain Net Réel
-              </span>
-              <span className="text-[11px] text-slate-400">
-                Bénéfice net après déduction de tous les achats articles et frais d'exploitation
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right">
+              <div className="flex items-center justify-between mb-3">
+                <span
+                  className={`text-[11px] font-bold uppercase tracking-wider ${
+                    isPositive ? 'text-emerald-200' : 'text-red-200'
+                  }`}
+                >
+                  Gain Net
+                </span>
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    isPositive ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                  }`}
+                >
+                  <TrendingUp
+                    className={`w-4 h-4 ${
+                      isPositive ? 'text-emerald-300' : 'text-red-300'
+                    }`}
+                  />
+                </div>
+              </div>
               <div
-                className={`text-2xl sm:text-3xl font-black tracking-tight ${
-                  netGain >= 0 ? 'text-emerald-400' : 'text-red-400'
+                className={`text-3xl font-black tracking-tight leading-none ${
+                  isPositive ? 'text-emerald-300' : 'text-red-300'
                 }`}
               >
-                {netGain >= 0 ? '+' : ''}
-                {formatTND(netGain)}{' '}
-                <span className="text-sm font-semibold opacity-90">TND</span>
+                {isPositive ? '+' : ''}
+                {formatTND(netGain)}
+                <span className="text-sm font-semibold opacity-80 ml-1.5">TND</span>
               </div>
-              <div
-                className={`text-[11px] font-semibold ${
-                  netGain >= 0 ? 'text-emerald-300/90' : 'text-red-300/90'
-                }`}
-              >
-                ≈ {netGain >= 0 ? '+' : ''}
-                {formatEUR(toEUR(netGain))} €
-              </div>
-              <div className="text-[11px] text-slate-300 font-medium">
-                Marge brute : <strong className="text-white">{profitMarginPercent}%</strong>
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wide">
+                    Marge brute
+                  </span>
+                  <span
+                    className={`text-xs font-extrabold ${
+                      isPositive ? 'text-emerald-300' : 'text-red-300'
+                    }`}
+                  >
+                    {profitMarginPercent}%
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. DETAILED 5 CORE CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        {/* 1. Prix Articles Facturé */}
-        <div
-          id="kpi-card-invoiced"
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:border-blue-300 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Prix Facturé Articles
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#001cd6] flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-slate-900">
-              {formatTND(invoicedArticles)}{' '}
-              <span className="text-xs font-medium text-slate-500">TND</span>
-            </div>
-            <div className="text-[11px] text-blue-600 font-semibold mt-0.5">
-              ≈ {formatEUR(toEUR(invoicedArticles))} €
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Articles vendus aux clients
-            </p>
-          </div>
-        </div>
+      {/* ═══════════════════════════════════════════════════════════
+          2. CARTES DÉTAILLÉES
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Articles facturés */}
+        <StatCard
+          icon={<DollarSign className="w-5 h-5" />}
+          label="Articles Facturés"
+          value={formatTND(invoicedArticles)}
+          unit="TND"
+          description="Ventes articles clients"
+          accent="blue"
+        />
 
-        {/* 2. Transport Facturé */}
-        <div
-          id="kpi-card-transport"
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:border-sky-300 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Transport Facturé
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
-              <Truck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-slate-900">
-              {formatTND(invoicedTransport)}{' '}
-              <span className="text-xs font-medium text-slate-500">TND</span>
-            </div>
-            <div className="text-[11px] text-sky-600 font-semibold mt-0.5">
-              ≈ {formatEUR(toEUR(invoicedTransport))} €
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Frais de port refacturés
-            </p>
-          </div>
-        </div>
+        {/* Transport facturé */}
+        <StatCard
+          icon={<Truck className="w-5 h-5" />}
+          label="Transport Facturé"
+          value={formatTND(invoicedTransport)}
+          unit="TND"
+          description="Frais de port refacturés"
+          accent="sky"
+        />
 
-        {/* 3. Dépenses Commandes */}
-        <div
-          id="kpi-card-spent"
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:border-amber-300 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Dépenses Commandes
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-slate-900">
-              {formatTND(spentOrders)}{' '}
-              <span className="text-xs font-medium text-slate-500">TND</span>
-            </div>
-            <div className="text-[11px] text-amber-700 font-semibold mt-0.5">
-              ≈ {formatEUR(toEUR(spentOrders))} €
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Prix d'achat des articles
-            </p>
-          </div>
-        </div>
+        {/* Dépenses commandes */}
+        <StatCard
+          icon={<ShoppingBag className="w-5 h-5" />}
+          label="Achats Articles"
+          value={formatTND(spentOrders)}
+          unit="TND"
+          description="Prix d'achat marchandises"
+          accent="amber"
+        />
 
-        {/* 4. Frais Généraux */}
-        <div
-          id="kpi-card-expenses"
-          className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs hover:border-rose-300 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Frais Généraux
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <Receipt className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="text-xl font-bold tracking-tight text-slate-900">
-              {formatTND(spentExpenses)}{' '}
-              <span className="text-xs font-medium text-slate-500">TND</span>
-            </div>
-            <div className="text-[11px] text-rose-600 font-semibold mt-0.5">
-              ≈ {formatEUR(toEUR(spentExpenses))} €
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Charges & coûts divers
-            </p>
-          </div>
-        </div>
+        {/* Frais généraux */}
+        <StatCard
+          icon={<Receipt className="w-5 h-5" />}
+          label="Frais Généraux"
+          value={formatTND(spentExpenses)}
+          unit="TND"
+          description="Charges & coûts divers"
+          accent="rose"
+          extraBadge={
+            kpis.totalExpensesEUR !== undefined
+              ? `${formatEUR(kpis.totalExpensesEUR)} €`
+              : undefined
+          }
+        />
+      </div>
 
-        {/* 5. Gain Net Total */}
+      {/* ═══════════════════════════════════════════════════════════
+          3. CASH-FLOW
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CashCard
+          icon={<Wallet className="w-5 h-5" />}
+          label="Total Avances Encaissées"
+          description="Acomptes versés par les clients"
+          value={formatTND(kpis.totalAdvancesTND ?? 0)}
+          accent="emerald"
+        />
+        <CashCard
+          icon={<Coins className="w-5 h-5" />}
+          label="Total Reste à Recouvrer"
+          description="Solde à encaisser à la livraison"
+          value={formatTND(kpis.totalRemainingTND ?? 0)}
+          accent="amber"
+        />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          4. INDICATEURS OPÉRATIONNELS
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MiniStat
+          icon={<ShoppingBag className="w-4 h-4" />}
+          label="Commandes"
+          value={kpis.ordersCount}
+          color="slate"
+        />
+        <MiniStat
+          icon={<PackageCheck className="w-4 h-4" />}
+          label="Livrées"
+          value={kpis.deliveredCount}
+          color="emerald"
+        />
+        <MiniStat
+          icon={<Clock className="w-4 h-4" />}
+          label="En cours"
+          value={kpis.pendingCount}
+          color="amber"
+        />
+        <MiniStat
+          icon={<Users className="w-4 h-4" />}
+          label="Clients uniques"
+          value={kpis.clientsCount}
+          color="indigo"
+        />
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   SOUS-COMPOSANTS RÉUTILISABLES
+═══════════════════════════════════════════════════════════════ */
+
+type Accent = 'blue' | 'sky' | 'amber' | 'rose' | 'emerald' | 'indigo' | 'slate';
+
+const ACCENT_STYLES: Record<
+  Accent,
+  { bg: string; text: string; border: string; iconBg: string; iconText: string }
+> = {
+  blue: {
+    bg: 'bg-blue-50/50',
+    text: 'text-blue-900',
+    border: 'hover:border-blue-300',
+    iconBg: 'bg-blue-100',
+    iconText: 'text-blue-700',
+  },
+  sky: {
+    bg: 'bg-sky-50/50',
+    text: 'text-sky-900',
+    border: 'hover:border-sky-300',
+    iconBg: 'bg-sky-100',
+    iconText: 'text-sky-700',
+  },
+  amber: {
+    bg: 'bg-amber-50/50',
+    text: 'text-amber-900',
+    border: 'hover:border-amber-300',
+    iconBg: 'bg-amber-100',
+    iconText: 'text-amber-700',
+  },
+  rose: {
+    bg: 'bg-rose-50/50',
+    text: 'text-rose-900',
+    border: 'hover:border-rose-300',
+    iconBg: 'bg-rose-100',
+    iconText: 'text-rose-700',
+  },
+  emerald: {
+    bg: 'bg-emerald-50/50',
+    text: 'text-emerald-900',
+    border: 'hover:border-emerald-300',
+    iconBg: 'bg-emerald-100',
+    iconText: 'text-emerald-700',
+  },
+  indigo: {
+    bg: 'bg-indigo-50/50',
+    text: 'text-indigo-900',
+    border: 'hover:border-indigo-300',
+    iconBg: 'bg-indigo-100',
+    iconText: 'text-indigo-700',
+  },
+  slate: {
+    bg: 'bg-slate-50/50',
+    text: 'text-slate-900',
+    border: 'hover:border-slate-300',
+    iconBg: 'bg-slate-100',
+    iconText: 'text-slate-700',
+  },
+};
+
+/* ── Carte détaillée ─────────────────────────────────────────── */
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  unit: string;
+  description: string;
+  accent: Accent;
+  extraBadge?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({
+  icon,
+  label,
+  value,
+  unit,
+  description,
+  accent,
+  extraBadge,
+}) => {
+  const styles = ACCENT_STYLES[accent];
+  return (
+    <div
+      className={`group bg-white rounded-2xl border border-slate-200 p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${styles.border}`}
+    >
+      <div className="flex items-start justify-between mb-3">
         <div
-          id="kpi-card-net-gain"
-          className={`rounded-xl border p-4 shadow-2xs transition-all ${
-            netGain >= 0
-              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-              : 'bg-red-50/70 border-red-200 text-red-950'
-          }`}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center ${styles.iconBg} ${styles.iconText} transition-transform group-hover:scale-105`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-              Gain Net Total
-            </span>
-            <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center text-white ${
-                netGain >= 0 ? 'bg-emerald-600' : 'bg-red-600'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-            </div>
+          {icon}
+        </div>
+        {extraBadge && (
+          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-mono">
+            {extraBadge}
+          </span>
+        )}
+      </div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+        {label}
+      </div>
+      <div className={`text-2xl font-black tracking-tight ${styles.text} leading-tight`}>
+        {value}
+        <span className="text-xs font-semibold text-slate-400 ml-1.5">{unit}</span>
+      </div>
+      <p className="text-[11px] text-slate-500 mt-2">{description}</p>
+    </div>
+  );
+};
+
+/* ── Carte cash-flow ─────────────────────────────────────────── */
+interface CashCardProps {
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  value: string;
+  accent: 'emerald' | 'amber';
+}
+
+const CashCard: React.FC<CashCardProps> = ({
+  icon,
+  label,
+  description,
+  value,
+  accent,
+}) => {
+  const styles =
+    accent === 'emerald'
+      ? {
+          wrapper: 'bg-emerald-50/60 border-emerald-200/70 hover:border-emerald-300',
+          icon: 'bg-emerald-100 text-emerald-700',
+          label: 'text-emerald-900',
+          value: 'text-emerald-950',
+          unit: 'text-emerald-700',
+        }
+      : {
+          wrapper: 'bg-amber-50/60 border-amber-200/70 hover:border-amber-300',
+          icon: 'bg-amber-100 text-amber-800',
+          label: 'text-amber-900',
+          value: 'text-amber-950',
+          unit: 'text-amber-800',
+        };
+
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 rounded-2xl border p-5 transition-all duration-200 hover:shadow-md ${styles.wrapper}`}
+    >
+      <div className="flex items-center gap-3.5 min-w-0">
+        <div
+          className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${styles.icon}`}
+        >
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div
+            className={`text-[11px] font-bold uppercase tracking-wider ${styles.label}`}
+          >
+            {label}
           </div>
-          <div className="mt-2.5">
-            <div
-              className={`text-xl font-bold tracking-tight ${
-                netGain >= 0 ? 'text-emerald-700' : 'text-red-700'
-              }`}
-            >
-              {netGain >= 0 ? '+' : ''}
-              {formatTND(netGain)}{' '}
-              <span className="text-xs font-medium opacity-80">TND</span>
-            </div>
-            <div
-              className={`text-[11px] font-semibold mt-0.5 ${
-                netGain >= 0 ? 'text-emerald-700/90' : 'text-red-700/90'
-              }`}
-            >
-              ≈ {netGain >= 0 ? '+' : ''}
-              {formatEUR(toEUR(netGain))} €
-            </div>
-            <p className="mt-1 text-[11px] text-emerald-800/80">
-              Facturé − Dépensé
-            </p>
+          <div className="text-[11px] text-slate-600 truncate mt-0.5">
+            {description}
           </div>
         </div>
       </div>
-
-      {/* 3. CASH-FLOW & AVANCES OVERVIEW BANNER */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-emerald-50/60 border border-emerald-200/70 rounded-xl p-3.5 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-              <Wallet className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">
-                Total Avances Encaissées
-              </span>
-              <span className="text-xs text-emerald-700/80">
-                Acomptes versés par les clients
-              </span>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-lg font-extrabold text-emerald-900 tracking-tight block">
-              {formatTND(totalAdvances)}{' '}
-              <span className="text-xs font-semibold text-emerald-700">TND</span>
-            </span>
-            <span className="text-[11px] text-emerald-700/90 font-semibold">
-              ≈ {formatEUR(toEUR(totalAdvances))} €
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-amber-50/60 border border-amber-200/70 rounded-xl p-3.5 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-              <Coins className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 block">
-                Total Reste à Recouvrer
-              </span>
-              <span className="text-xs text-amber-800/80">
-                Montant restant à encaisser à la livraison
-              </span>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-lg font-extrabold text-amber-950 tracking-tight block">
-              {formatTND(totalRemaining)}{' '}
-              <span className="text-xs font-semibold text-amber-800">TND</span>
-            </span>
-            <span className="text-[11px] text-amber-800/90 font-semibold">
-              ≈ {formatEUR(toEUR(totalRemaining))} €
-            </span>
-          </div>
-        </div>
+      <div className={`text-xl font-extrabold tracking-tight shrink-0 ${styles.value}`}>
+        {value}
+        <span className={`text-xs font-semibold ml-1 ${styles.unit}`}>TND</span>
       </div>
+    </div>
+  );
+};
 
-      {/* 4. SECONDARY OPERATIONAL QUICK INDICATORS */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-slate-200 text-xs">
-        <div className="flex items-center space-x-2 text-slate-600">
-          <ShoppingBag className="w-4 h-4 text-slate-400 shrink-0" />
-          <span>
-            Total commandes: <strong className="text-slate-800 font-semibold">{kpis.ordersCount}</strong>
-          </span>
+/* ── Mini indicateur ─────────────────────────────────────────── */
+interface MiniStatProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  color: 'slate' | 'emerald' | 'amber' | 'indigo';
+}
+
+const MiniStat: React.FC<MiniStatProps> = ({ icon, label, value, color }) => {
+  const colorMap = {
+    slate: 'text-slate-600 bg-slate-100',
+    emerald: 'text-emerald-700 bg-emerald-100',
+    amber: 'text-amber-700 bg-amber-100',
+    indigo: 'text-indigo-700 bg-indigo-100',
+  };
+  return (
+    <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
+      <div
+        className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${colorMap[color]}`}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          {label}
         </div>
-        <div className="flex items-center space-x-2 text-slate-600">
-          <PackageCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-          <span>
-            Livrées: <strong className="text-emerald-700 font-semibold">{kpis.deliveredCount}</strong>
-          </span>
-        </div>
-        <div className="flex items-center space-x-2 text-slate-600">
-          <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>
-            En cours: <strong className="text-amber-700 font-semibold">{kpis.pendingCount}</strong>
-          </span>
-        </div>
-        <div className="flex items-center space-x-2 text-slate-600">
-          <Users className="w-4 h-4 text-indigo-500 shrink-0" />
-          <span>
-            Clients uniques: <strong className="text-indigo-700 font-semibold">{kpis.clientsCount}</strong>
-          </span>
+        <div className="text-base font-extrabold text-slate-900 leading-tight">
+          {value}
         </div>
       </div>
     </div>

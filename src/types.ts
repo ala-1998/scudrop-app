@@ -27,6 +27,7 @@ export interface Order {
 
 export interface Expense {
   _id: string;
+  reference?: string; // Référence / code du frais (ex: FG-2026-001)
   description: string;
   amountEuro: number;
   exchangeRate: number;
@@ -52,6 +53,7 @@ export interface GlobalKPIs {
   totalTransportTND: number;
   totalSpentTND: number;
   totalExpensesTND: number;
+  totalExpensesEUR?: number; // Somme directe brute en Euro (€) saisie par l'utilisateur sans passer par le taux
   totalNetGainTND: number;
   totalAdvancesTND?: number;
   totalRemainingTND?: number;

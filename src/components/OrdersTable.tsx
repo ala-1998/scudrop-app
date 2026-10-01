@@ -52,6 +52,13 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
     }).format(val || 0);
   };
 
+  const formatEUR = (val: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(val || 0) + ' €';
+  };
+
   const handleStatusClick = async (order: Order) => {
     const nextStatus: DeliveryStatus =
       order.deliveryStatus === 'Livré' ? 'En cours de livraison' : 'Livré';
@@ -112,6 +119,22 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
     return s + rem;
   }, 0);
   const totalGainFiltered = filteredOrders.reduce((s, o) => s + (o.gainTND || 0), 0);
+
+  // ✅ Totaux en EUROS (somme brute des montants saisis, sans conversion par taux)
+  const totalInvoicedForeignFiltered = filteredOrders.reduce(
+    (s, o) => s + (o.invoicedPriceForeign || 0),
+    0
+  );
+  const totalTransportForeignFiltered = filteredOrders.reduce(
+    (s, o) => s + (o.transportForeign || 0),
+    0
+  );
+  const totalBilledForeignFiltered =
+    totalInvoicedForeignFiltered + totalTransportForeignFiltered;
+  const totalSpentForeignFiltered = filteredOrders.reduce(
+    (s, o) => s + (o.spentPriceForeign || 0),
+    0
+  );
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
@@ -413,24 +436,46 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 <td colSpan={3} className="py-3 px-3 text-right text-slate-600 uppercase tracking-wider text-[10px]">
                   Totaux Commandes Affichées ({filteredOrders.length}) :
                 </td>
+
+                {/* Articles TND + € */}
                 <td className="py-3 px-3 text-blue-900">
-                  {formatTND(totalInvoicedFiltered)} TND
+                  <div>{formatTND(totalInvoicedFiltered)} TND</div>
+                  <div className="text-[10px] font-medium text-slate-500">
+                    {formatEUR(totalInvoicedForeignFiltered)}
+                  </div>
                 </td>
+
+                {/* Transport TND + € */}
                 <td className="py-3 px-3 text-sky-900">
-                  {formatTND(totalTransportFiltered)} TND
+                  <div>{formatTND(totalTransportFiltered)} TND</div>
+                  <div className="text-[10px] font-medium text-slate-500">
+                    {formatEUR(totalTransportForeignFiltered)}
+                  </div>
                 </td>
+
+                {/* Total Facturé TND + € */}
                 <td className="py-3 px-3 bg-blue-100/50 text-[#001cd6] font-extrabold text-xs">
-                  {formatTND(totalBilledFiltered)} TND
+                  <div>{formatTND(totalBilledFiltered)} TND</div>
+                  <div className="text-[10px] font-bold text-blue-600">
+                    {formatEUR(totalBilledForeignFiltered)}
+                  </div>
                 </td>
+
+                {/* Dépensé Achat TND + € */}
                 <td className="py-3 px-3 text-amber-900">
-                  {formatTND(totalSpentFiltered)} TND
+                  <div>{formatTND(totalSpentFiltered)} TND</div>
+                  <div className="text-[10px] font-medium text-slate-500">
+                    {formatEUR(totalSpentForeignFiltered)}
+                  </div>
                 </td>
+
                 <td className="py-3 px-3">
                   <div className="text-[10px]">
                     <span className="text-emerald-700 block">Av.: {formatTND(totalAdvanceFiltered)}</span>
                     <span className="text-amber-800 block">Reste: {formatTND(totalRemainingFiltered)}</span>
                   </div>
                 </td>
+
                 <td className="py-3 px-3">
                   <span className="text-emerald-700 font-black text-xs">
                     +{formatTND(totalGainFiltered)} TND

@@ -22,6 +22,7 @@ export interface OrderInput {
 }
 
 export interface ExpenseInput {
+  reference?: string;
   description: string;
   amountEuro?: number | string;
   exchangeRate?: number | string;
@@ -62,6 +63,7 @@ interface LocalDbSchema {
   }>;
   expenses: Array<{
     _id: string;
+    reference?: string;
     description: string;
     amountEuro: number;
     exchangeRate: number;
@@ -275,6 +277,7 @@ function initLocalDb(): LocalDbSchema {
     expenses: [
       {
         _id: 'exp_101',
+        reference: 'FG-2026-001',
         description: 'Abonnement boîte postale & plateforme transit',
         amountEuro: 45,
         exchangeRate: 3.35,
@@ -285,6 +288,7 @@ function initLocalDb(): LocalDbSchema {
       },
       {
         _id: 'exp_102',
+        reference: 'FG-2026-002',
         description: 'Emballages bulles, cartons et rubans adhésifs',
         amountEuro: 30,
         exchangeRate: 3.35,
@@ -328,6 +332,7 @@ async function seedMongoIfEmpty() {
     }
     for (const exp of defaultData.expenses) {
       await ExpenseModel.create({
+        reference: exp.reference || '',
         description: exp.description,
         amountEuro: exp.amountEuro,
         exchangeRate: exp.exchangeRate,
@@ -487,6 +492,7 @@ export const dbService = {
   async createExpense(data: ExpenseInput) {
     const calc = calculateExpenseFields(data);
     const expenseData = {
+      reference: data.reference?.trim() || '',
       description: data.description.trim(),
       amountEuro: calc.amountEuro,
       exchangeRate: calc.exchangeRate,
@@ -516,6 +522,7 @@ export const dbService = {
     if (isMongoConnected) {
       const existing = await ExpenseModel.findById(id);
       if (!existing) throw new Error('Frais introuvable');
+      if (data.reference !== undefined) existing.reference = data.reference.trim();
       if (data.description !== undefined) existing.description = data.description.trim();
       if (data.amountEuro !== undefined) existing.amountEuro = Number(data.amountEuro);
       if (data.exchangeRate !== undefined) existing.exchangeRate = Number(data.exchangeRate);
@@ -535,6 +542,7 @@ export const dbService = {
 
     const updated = {
       ...curr,
+      reference: data.reference !== undefined ? data.reference.trim() : ((curr as any).reference || ''),
       description: data.description !== undefined ? data.description.trim() : curr.description,
       amountEuro: euro,
       exchangeRate: rate,
@@ -583,6 +591,11 @@ export const dbService = {
     // 4. Total Frais Généraux (TND)
     const totalExpensesTND = Number(
       expenses.reduce((sum, e) => sum + (Number(e.amountTND) || 0), 0).toFixed(3)
+    );
+
+    // 4.b Total Frais Généraux Saisis Directement en Euro (€ sans recalcul par taux)
+    const totalExpensesEUR = Number(
+      expenses.reduce((sum, e) => sum + (Number(e.amountEuro) || 0), 0).toFixed(2)
     );
 
     // 5. Total Gain Net (TND) = (Total Prix Facturé + Total Transport Facturé) - Total Prix Dépensé Commandes - Total Frais Généraux
@@ -666,6 +679,7 @@ export const dbService = {
         totalTransportTND,
         totalSpentTND,
         totalExpensesTND,
+        totalExpensesEUR,
         totalNetGainTND,
         totalAdvancesTND,
         totalRemainingTND,

@@ -16,12 +16,13 @@ expenseRouter.get('/', async (_req: Request, res: Response) => {
 // POST create expense
 expenseRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { description, amountEuro, exchangeRate, date } = req.body;
+    const { reference, description, amountEuro, exchangeRate, date } = req.body;
     if (!description || !description.trim()) {
       return res.status(400).json({ error: 'La description du frais est requise.' });
     }
 
     const created = await dbService.createExpense({
+      reference,
       description,
       amountEuro,
       exchangeRate,
@@ -36,8 +37,9 @@ expenseRouter.post('/', async (req: Request, res: Response) => {
 // PUT update expense
 expenseRouter.put('/:id', async (req: Request, res: Response) => {
   try {
-    const { description, amountEuro, exchangeRate, date } = req.body;
+    const { reference, description, amountEuro, exchangeRate, date } = req.body;
     const updated = await dbService.updateExpense(req.params.id, {
+      reference,
       description,
       amountEuro,
       exchangeRate,

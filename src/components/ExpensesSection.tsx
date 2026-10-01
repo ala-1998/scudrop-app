@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Receipt,
   Plus,
   Trash2,
   Edit2,
   Calendar,
-  DollarSign,
   AlertCircle,
   X,
-  ChevronLeft,
-  ChevronRight,
+  Tag,
+  Euro,
 } from 'lucide-react';
 import { Expense } from '../types';
 
 interface ExpensesSectionProps {
   expenses: Expense[];
   onAddExpense: (data: {
+    reference?: string;
     description: string;
     amountEuro: number;
     exchangeRate: number;
@@ -24,6 +24,7 @@ interface ExpensesSectionProps {
   onUpdateExpense: (
     id: string,
     data: {
+      reference?: string;
       description: string;
       amountEuro: number;
       exchangeRate: number;
@@ -32,8 +33,6 @@ interface ExpensesSectionProps {
   ) => Promise<void>;
   onDeleteExpense: (id: string) => Promise<void>;
 }
-
-const PAGE_SIZE = 10;
 
 export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
   expenses,
@@ -44,18 +43,19 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
+  const [reference, setReference] = useState('');
   const [description, setDescription] = useState('');
   const [amountEuro, setAmountEuro] = useState<number | string>(0);
   const [exchangeRate, setExchangeRate] = useState<number | string>(3.35);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
 
   const calculatedTND = (Number(amountEuro) || 0) * (Number(exchangeRate) || 0);
 
   const openAddForm = () => {
     setEditingExpense(null);
+    setReference('');
     setDescription('');
     setAmountEuro(0);
     setExchangeRate(3.35);
@@ -66,6 +66,7 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
 
   const openEditForm = (exp: Expense) => {
     setEditingExpense(exp);
+    setReference(exp.reference || '');
     setDescription(exp.description);
     setAmountEuro(exp.amountEuro);
     setExchangeRate(exp.exchangeRate);
@@ -79,6 +80,7 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingExpense(null);
+    setReference('');
     setErrorMsg(null);
   };
 
@@ -93,6 +95,7 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
     setErrorMsg(null);
     try {
       const payload = {
+        reference: reference.trim(),
         description: description.trim(),
         amountEuro: Number(amountEuro) || 0,
         exchangeRate: Number(exchangeRate) || 3.35,
@@ -119,32 +122,45 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
     }).format(val || 0);
   };
 
+  const formatEUR = (val: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(val || 0);
+  };
+
+  // 1. Somme directe brute en Euro (€) déjà saisie par l'utilisateur (sans recalcul de taux)
+  const totalExpensesEUR = expenses.reduce((sum, e) => sum + (Number(e.amountEuro) || 0), 0);
+  // 2. Total converti en Dinars Tunisiens (TND)
   const totalExpensesTND = expenses.reduce((sum, e) => sum + (Number(e.amountTND) || 0), 0);
-
-  // ----- Pagination -----
-  const totalPages = Math.max(1, Math.ceil(expenses.length / PAGE_SIZE));
-
-  useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(totalPages);
-  }, [totalPages, currentPage]);
-
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const paginatedExpenses = expenses.slice(startIndex, startIndex + PAGE_SIZE);
-
-  const goPrev = () => setCurrentPage((p) => Math.max(1, p - 1));
-  const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
       {/* Section Header */}
       <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-bold text-slate-800">
               Partie Frais Généraux ({expenses.length})
             </h2>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-              Total: {formatTND(totalExpensesTND)} TND
+
+            {/* Total Euro Saisi Directement (Sans Taux) */}
+            <span
+              className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1 shadow-2xs"
+              title="Somme exacte des montants bruts en Euro saisis directement (sans recalcul par taux)"
+            >
+              <Euro className="w-3.5 h-3.5 text-amber-700" />
+              <span className="text-[10px] font-semibold text-amber-700 uppercase">Total Euro (€) :</span>
+              <span className="font-extrabold text-amber-950">{formatEUR(totalExpensesEUR)} €</span>
+            </span>
+
+            {/* Total Converti en TND */}
+            <span
+              className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 shadow-2xs"
+              title="Total calculé en Dinars Tunisiens"
+            >
+              <span className="text-[10px] font-semibold text-rose-500 uppercase">Total TND :</span>
+              <span className="font-extrabold text-rose-800">{formatTND(totalExpensesTND)} TND</span>
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -189,7 +205,24 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            {/* Case Référence */}
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                <Tag className="w-3 h-3 text-slate-400" />
+                Référence <span className="text-slate-400 font-normal text-[10px]">(Optionnel)</span>
+              </label>
+              <input
+                id="input-expense-ref"
+                type="text"
+                placeholder="ex: FG-2026-001"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden uppercase font-mono"
+              />
+            </div>
+
+            {/* Description */}
             <div className="sm:col-span-2">
               <label className="block font-semibold text-slate-700 mb-1">
                 Description du frais <span className="text-red-500">*</span>
@@ -205,6 +238,7 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
               />
             </div>
 
+            {/* Date */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Date de dépense
@@ -218,6 +252,7 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
               />
             </div>
 
+            {/* Montant Euro */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Montant en Euro (€)
@@ -229,10 +264,11 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                 min="0"
                 value={amountEuro}
                 onChange={(e) => setAmountEuro(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-bold"
               />
             </div>
 
+            {/* Taux de Change */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Taux de Change (€ $\rightarrow$ TND)
@@ -249,10 +285,16 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
             </div>
 
             {/* Calculated Preview */}
-            <div className="sm:col-span-3 flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200">
-              <span className="text-slate-500 font-medium">
-                Montant calculé en Dinars Tunisiens (TND) :
-              </span>
+            <div className="sm:col-span-4 flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200">
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 font-medium">
+                  Montant en Euro saisi : <strong className="text-slate-800 font-bold">{Number(amountEuro) || 0} €</strong>
+                </span>
+                <span className="text-slate-300">|</span>
+                <span className="text-slate-500 font-medium">
+                  Montant en Dinars Tunisiens (TND) :
+                </span>
+              </div>
               <span className="font-extrabold text-sm text-rose-700">
                 {calculatedTND.toFixed(3)} TND
               </span>
@@ -285,42 +327,53 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
           <thead>
             <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
               <th className="py-3 px-4">Date</th>
+              <th className="py-3 px-4">Référence</th>
               <th className="py-3 px-4">Description</th>
-              <th className="py-3 px-4">Montant (€)</th>
-              <th className="py-3 px-4">Taux de Change</th>
-              <th className="py-3 px-4">Montant (TND)</th>
+              <th className="py-3 px-4 text-right">Montant (€ Saisi)</th>
+              <th className="py-3 px-4 text-center">Taux (€ $\rightarrow$ TND)</th>
+              <th className="py-3 px-4 text-right">Montant (TND)</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {expenses.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-400">
+                <td colSpan={7} className="py-8 text-center text-slate-400">
                   Aucun frais général enregistré pour le moment.
                 </td>
               </tr>
             ) : (
-              paginatedExpenses.map((exp) => (
+              expenses.map((exp) => (
                 <tr key={exp._id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-3 px-4 text-slate-500 font-sans">
+                  <td className="py-3 px-4 text-slate-500 font-sans whitespace-nowrap">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" />
                       {new Date(exp.date).toLocaleDateString('fr-FR')}
                     </span>
                   </td>
+                  <td className="py-3 px-4 font-mono font-bold text-slate-700 whitespace-nowrap">
+                    {exp.reference ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                        <Tag className="w-2.5 h-2.5 text-slate-400" />
+                        {exp.reference}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic text-[11px]">—</span>
+                    )}
+                  </td>
                   <td className="py-3 px-4 font-semibold text-slate-800">
                     {exp.description}
                   </td>
-                  <td className="py-3 px-4 font-medium text-slate-700">
-                    {exp.amountEuro} €
+                  <td className="py-3 px-4 text-right font-extrabold text-amber-900 bg-amber-50/30 whitespace-nowrap">
+                    {formatEUR(exp.amountEuro)} €
                   </td>
-                  <td className="py-3 px-4 text-slate-500">
+                  <td className="py-3 px-4 text-center text-slate-500 font-mono">
                     {exp.exchangeRate}
                   </td>
-                  <td className="py-3 px-4 font-bold text-rose-700">
+                  <td className="py-3 px-4 text-right font-bold text-rose-700 bg-rose-50/30 whitespace-nowrap">
                     {formatTND(exp.amountTND)} TND
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => openEditForm(exp)}
@@ -342,49 +395,29 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
               ))
             )}
           </tbody>
+          {expenses.length > 0 && (
+            <tfoot className="bg-slate-50/90 border-t-2 border-slate-200 font-bold text-xs">
+              <tr>
+                <td colSpan={3} className="py-3 px-4 text-slate-800 uppercase tracking-wider text-[11px]">
+                  Total Général des Frais ({expenses.length})
+                </td>
+                <td className="py-3 px-4 text-right font-extrabold text-amber-950 bg-amber-100/60 border-x border-amber-200">
+                  <span className="block text-[10px] text-amber-800 font-semibold uppercase">Total Euro Brut Saisi</span>
+                  {formatEUR(totalExpensesEUR)} €
+                </td>
+                <td className="py-3 px-4 text-center text-slate-400 font-normal text-[11px]">
+                  —
+                </td>
+                <td className="py-3 px-4 text-right font-extrabold text-rose-800 bg-rose-100/60 border-x border-rose-200">
+                  <span className="block text-[10px] text-rose-700 font-semibold uppercase">Total Converti TND</span>
+                  {formatTND(totalExpensesTND)} TND
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
-
-      {/* Pagination */}
-      {expenses.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3 border-t border-slate-100 bg-slate-50/40">
-          <div className="text-[11px] text-slate-500">
-            Affichage{' '}
-            <span className="font-semibold text-slate-700">{startIndex + 1}</span>{' '}
-            –{' '}
-            <span className="font-semibold text-slate-700">
-              {Math.min(startIndex + PAGE_SIZE, expenses.length)}
-            </span>{' '}
-            sur{' '}
-            <span className="font-semibold text-slate-700">{expenses.length}</span>{' '}
-            frais
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={goPrev}
-              disabled={currentPage === 1}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              Précédent
-            </button>
-
-            <span className="text-xs font-semibold text-slate-600 px-2">
-              Page {currentPage} / {totalPages}
-            </span>
-
-            <button
-              onClick={goNext}
-              disabled={currentPage === totalPages}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Suivant
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

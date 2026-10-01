@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IExpense extends Document {
+  reference?: string;
   description: string;
   amountEuro: number;
   exchangeRate: number;
@@ -12,6 +13,7 @@ export interface IExpense extends Document {
 
 export const ExpenseSchema = new Schema<IExpense>(
   {
+    reference: { type: String, default: '', trim: true },
     description: { type: String, required: true, trim: true },
     amountEuro: { type: Number, default: 0 },
     exchangeRate: { type: Number, default: 3.35 },

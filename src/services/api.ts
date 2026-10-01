@@ -72,6 +72,7 @@ export async function getExpenses(): Promise<Expense[]> {
 }
 
 export async function createExpense(data: {
+  reference?: string;
   description: string;
   amountEuro: number;
   exchangeRate: number;
@@ -92,6 +93,7 @@ export async function createExpense(data: {
 export async function updateExpense(
   id: string,
   data: {
+    reference?: string;
     description: string;
     amountEuro: number;
     exchangeRate: number;
