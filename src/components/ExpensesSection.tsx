@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Receipt,
   Plus,
@@ -9,6 +9,10 @@ import {
   X,
   Tag,
   Euro,
+  Search,
+  Filter,
+  Hash,
+  TrendingDown,
 } from 'lucide-react';
 import { Expense } from '../types';
 
@@ -51,6 +55,10 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // 🔍 Recherche
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'>('date_desc');
+
   const calculatedTND = (Number(amountEuro) || 0) * (Number(exchangeRate) || 0);
 
   const openAddForm = () => {
@@ -71,7 +79,9 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
     setAmountEuro(exp.amountEuro);
     setExchangeRate(exp.exchangeRate);
     setDate(
-      exp.date ? new Date(exp.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      exp.date
+        ? new Date(exp.date).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0]
     );
     setErrorMsg(null);
     setIsFormOpen(true);
@@ -115,70 +125,187 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
     }
   };
 
-  const formatTND = (val: number) => {
-    return new Intl.NumberFormat('fr-TN', {
+  const formatTND = (val: number) =>
+    new Intl.NumberFormat('fr-TN', {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
     }).format(val || 0);
-  };
 
-  const formatEUR = (val: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+  const formatEUR = (val: number) =>
+    new Intl.NumberFormat('fr-FR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(val || 0);
-  };
 
-  // 1. Somme directe brute en Euro (€) déjà saisie par l'utilisateur (sans recalcul de taux)
-  const totalExpensesEUR = expenses.reduce((sum, e) => sum + (Number(e.amountEuro) || 0), 0);
-  // 2. Total converti en Dinars Tunisiens (TND)
-  const totalExpensesTND = expenses.reduce((sum, e) => sum + (Number(e.amountTND) || 0), 0);
+  // 🔍 Filtrage + tri
+  const filteredExpenses = useMemo(() => {
+    const s = searchTerm.toLowerCase().trim();
+    const filtered = !s
+      ? expenses
+      : expenses.filter((e) => {
+          const desc = (e.description || '').toLowerCase();
+          const ref = (e.reference || '').toLowerCase();
+          const dateStr = e.date
+            ? new Date(e.date).toLocaleDateString('fr-FR').toLowerCase()
+            : '';
+          const amountStr = String(e.amountEuro ?? '');
+          const tndStr = String(e.amountTND ?? '');
+          return (
+            desc.includes(s) ||
+            ref.includes(s) ||
+            dateStr.includes(s) ||
+            amountStr.includes(s) ||
+            tndStr.includes(s)
+          );
+        });
+
+    // Tri
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case 'date_asc':
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'amount_desc':
+          return (b.amountEuro || 0) - (a.amountEuro || 0);
+        case 'amount_asc':
+          return (a.amountEuro || 0) - (b.amountEuro || 0);
+        case 'date_desc':
+        default:
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+    });
+    return sorted;
+  }, [expenses, searchTerm, sortBy]);
+
+  // 🧮 Totaux sur les frais FILTRÉS
+  const totalExpensesEUR = filteredExpenses.reduce(
+    (sum, e) => sum + (Number(e.amountEuro) || 0),
+    0
+  );
+  const totalExpensesTND = filteredExpenses.reduce(
+    (sum, e) => sum + (Number(e.amountTND) || 0),
+    0
+  );
+
+  const isFiltered = searchTerm.trim().length > 0;
+  const hasExpenses = expenses.length > 0;
+  const hasFilteredResults = filteredExpenses.length > 0;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-      {/* Section Header */}
-      <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-bold text-slate-800">
-              Partie Frais Généraux ({expenses.length})
-            </h2>
-
-            {/* Total Euro Saisi Directement (Sans Taux) */}
-            <span
-              className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1 shadow-2xs"
-              title="Somme exacte des montants bruts en Euro saisis directement (sans recalcul par taux)"
-            >
-              <Euro className="w-3.5 h-3.5 text-amber-700" />
-              <span className="text-[10px] font-semibold text-amber-700 uppercase">Total Euro (€) :</span>
-              <span className="font-extrabold text-amber-950">{formatEUR(totalExpensesEUR)} €</span>
-            </span>
-
-            {/* Total Converti en TND */}
-            <span
-              className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 shadow-2xs"
-              title="Total calculé en Dinars Tunisiens"
-            >
-              <span className="text-[10px] font-semibold text-rose-500 uppercase">Total TND :</span>
-              <span className="font-extrabold text-rose-800">{formatTND(totalExpensesTND)} TND</span>
-            </span>
+      {/* ═══════════════════════════════════════════════════════════
+          HEADER — Titre + Totaux dynamiques + Bouton Ajouter
+      ═══════════════════════════════════════════════════════════ */}
+      <div className="p-5 border-b border-slate-100 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-bold text-slate-800">
+                Partie Frais Généraux
+              </h2>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                {filteredExpenses.length}
+                {isFiltered && (
+                  <span className="text-rose-400 font-medium">
+                    {' '}/ {expenses.length}
+                  </span>
+                )}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Dépenses opérationnelles, emballages, douanes, abonnements et logistique
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Dépenses opérationnelles, emballages, douanes, abonnements et logistique
-          </p>
+
+          <button
+            id="btn-add-expense"
+            onClick={openAddForm}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98] self-start"
+          >
+            <Plus className="w-4 h-4" />
+            Ajouter un Frais
+          </button>
         </div>
 
-        <button
-          id="btn-add-expense"
-          onClick={openAddForm}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Ajouter un Frais
-        </button>
+        {/* Barre de recherche + Tri */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              id="search-expenses-input"
+              type="text"
+              placeholder="Rechercher (description, référence, date, montant…)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all"
+            />
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-rose-100 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                title="Effacer la recherche"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs shrink-0">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              id="sort-expenses-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="bg-transparent text-slate-700 focus:outline-none font-semibold cursor-pointer pr-1"
+            >
+              <option value="date_desc">Plus récents</option>
+              <option value="date_asc">Plus anciens</option>
+              <option value="amount_desc">Montant ↓</option>
+              <option value="amount_asc">Montant ↑</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 🎯 Totaux dynamiques (sur les frais filtrés) */}
+        {hasExpenses && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="flex items-center gap-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+              <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Euro className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                  Total Euro {isFiltered && '(filtré)'}
+                </div>
+                <div className="text-sm font-black text-amber-950 tracking-tight">
+                  {formatEUR(totalExpensesEUR)}{' '}
+                  <span className="text-[10px] font-semibold opacity-70">€</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-xl px-3.5 py-2.5">
+              <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <TrendingDown className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-rose-700">
+                  Total TND {isFiltered && '(filtré)'}
+                </div>
+                <div className="text-sm font-black text-rose-950 tracking-tight">
+                  {formatTND(totalExpensesTND)}{' '}
+                  <span className="text-[10px] font-semibold opacity-70">TND</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Inline Form (collapsible) */}
+      {/* ═══════════════════════════════════════════════════════════
+          FORMULAIRE INLINE
+      ═══════════════════════════════════════════════════════════ */}
       {isFormOpen && (
         <form
           onSubmit={handleSubmit}
@@ -187,12 +314,14 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
           <div className="flex items-center justify-between">
             <span className="font-bold text-slate-800 flex items-center gap-1.5">
               <Receipt className="w-4 h-4 text-rose-500" />
-              {editingExpense ? 'Modifier le Frais Général' : 'Nouveau Frais Général'}
+              {editingExpense
+                ? 'Modifier le Frais Général'
+                : 'Nouveau Frais Général'}
             </span>
             <button
               type="button"
               onClick={closeForm}
-              className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="w-6 h-6 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -206,11 +335,13 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            {/* Case Référence */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <Tag className="w-3 h-3 text-slate-400" />
-                Référence <span className="text-slate-400 font-normal text-[10px]">(Optionnel)</span>
+                Référence{' '}
+                <span className="text-slate-400 font-normal text-[10px]">
+                  (Optionnel)
+                </span>
               </label>
               <input
                 id="input-expense-ref"
@@ -218,11 +349,10 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                 placeholder="ex: FG-2026-001"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden uppercase font-mono"
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none uppercase font-mono"
               />
             </div>
 
-            {/* Description */}
             <div className="sm:col-span-2">
               <label className="block font-semibold text-slate-700 mb-1">
                 Description du frais <span className="text-red-500">*</span>
@@ -234,11 +364,10 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                 placeholder="ex: Emballages cartons, Scotch & Bulles"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
               />
             </div>
 
-            {/* Date */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Date de dépense
@@ -248,11 +377,10 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none"
               />
             </div>
 
-            {/* Montant Euro */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 Montant en Euro (€)
@@ -264,14 +392,13 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                 min="0"
                 value={amountEuro}
                 onChange={(e) => setAmountEuro(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden font-bold"
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-hidden font-bold"
               />
             </div>
 
-            {/* Taux de Change */}
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Taux de Change (€ $\rightarrow$ TND)
+                Taux de Change (€ → TND)
               </label>
               <input
                 id="input-expense-rate"
@@ -280,19 +407,21 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                 min="0"
                 value={exchangeRate}
                 onChange={(e) => setExchangeRate(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-hidden"
+                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-hidden"
               />
             </div>
 
-            {/* Calculated Preview */}
             <div className="sm:col-span-4 flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200">
               <div className="flex items-center gap-3">
                 <span className="text-slate-500 font-medium">
-                  Montant en Euro saisi : <strong className="text-slate-800 font-bold">{Number(amountEuro) || 0} €</strong>
+                  Euro saisi :{' '}
+                  <strong className="text-slate-800 font-bold">
+                    {Number(amountEuro) || 0} €
+                  </strong>
                 </span>
                 <span className="text-slate-300">|</span>
                 <span className="text-slate-500 font-medium">
-                  Montant en Dinars Tunisiens (TND) :
+                  Montant TND :
                 </span>
               </div>
               <span className="font-extrabold text-sm text-rose-700">
@@ -315,13 +444,19 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
               disabled={isSubmitting}
               className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md font-bold disabled:opacity-50 cursor-pointer shadow-2xs"
             >
-              {isSubmitting ? 'Enregistrement...' : editingExpense ? 'Modifier' : 'Valider'}
+              {isSubmitting
+                ? 'Enregistrement...'
+                : editingExpense
+                ? 'Modifier'
+                : 'Valider'}
             </button>
           </div>
         </form>
       )}
 
-      {/* Expenses Table */}
+      {/* ═══════════════════════════════════════════════════════════
+          TABLEAU
+      ═══════════════════════════════════════════════════════════ */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
@@ -330,21 +465,42 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
               <th className="py-3 px-4">Référence</th>
               <th className="py-3 px-4">Description</th>
               <th className="py-3 px-4 text-right">Montant (€ Saisi)</th>
-              <th className="py-3 px-4 text-center">Taux (€ $\rightarrow$ TND)</th>
+              <th className="py-3 px-4 text-center">Taux (€ → TND)</th>
               <th className="py-3 px-4 text-right">Montant (TND)</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
-            {expenses.length === 0 ? (
+            {!hasFilteredResults ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400">
-                  Aucun frais général enregistré pour le moment.
+                <td colSpan={7} className="py-12 text-center">
+                  <div className="max-w-xs mx-auto space-y-2">
+                    <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center">
+                      {isFiltered ? (
+                        <Search className="w-6 h-6 text-slate-400" />
+                      ) : (
+                        <Receipt className="w-6 h-6 text-slate-400" />
+                      )}
+                    </div>
+                    <p className="font-bold text-slate-600 text-sm">
+                      {isFiltered
+                        ? 'Aucun frais ne correspond'
+                        : 'Aucun frais enregistré'}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {isFiltered
+                        ? 'Essayez un autre mot-clé ou effacez la recherche.'
+                        : 'Cliquez sur "Ajouter un Frais" pour commencer.'}
+                    </p>
+                  </div>
                 </td>
               </tr>
             ) : (
-              expenses.map((exp) => (
-                <tr key={exp._id} className="hover:bg-slate-50/50 transition-colors">
+              filteredExpenses.map((exp) => (
+                <tr
+                  key={exp._id}
+                  className="hover:bg-slate-50/50 transition-colors"
+                >
                   <td className="py-3 px-4 text-slate-500 font-sans whitespace-nowrap">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" />
@@ -358,7 +514,9 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
                         {exp.reference}
                       </span>
                     ) : (
-                      <span className="text-slate-400 italic text-[11px]">—</span>
+                      <span className="text-slate-400 italic text-[11px]">
+                        —
+                      </span>
                     )}
                   </td>
                   <td className="py-3 px-4 font-semibold text-slate-800">
@@ -395,21 +553,29 @@ export const ExpensesSection: React.FC<ExpensesSectionProps> = ({
               ))
             )}
           </tbody>
-          {expenses.length > 0 && (
+
+          {hasFilteredResults && (
             <tfoot className="bg-slate-50/90 border-t-2 border-slate-200 font-bold text-xs">
               <tr>
-                <td colSpan={3} className="py-3 px-4 text-slate-800 uppercase tracking-wider text-[11px]">
-                  Total Général des Frais ({expenses.length})
+                <td
+                  colSpan={3}
+                  className="py-3 px-4 text-slate-800 uppercase tracking-wider text-[11px]"
+                >
+                  {isFiltered ? 'Totaux des frais filtrés' : 'Total Général des Frais'} ({filteredExpenses.length})
                 </td>
                 <td className="py-3 px-4 text-right font-extrabold text-amber-950 bg-amber-100/60 border-x border-amber-200">
-                  <span className="block text-[10px] text-amber-800 font-semibold uppercase">Total Euro Brut Saisi</span>
+                  <span className="block text-[10px] text-amber-800 font-semibold uppercase">
+                    Total Euro Brut Saisi
+                  </span>
                   {formatEUR(totalExpensesEUR)} €
                 </td>
                 <td className="py-3 px-4 text-center text-slate-400 font-normal text-[11px]">
                   —
                 </td>
                 <td className="py-3 px-4 text-right font-extrabold text-rose-800 bg-rose-100/60 border-x border-rose-200">
-                  <span className="block text-[10px] text-rose-700 font-semibold uppercase">Total Converti TND</span>
+                  <span className="block text-[10px] text-rose-700 font-semibold uppercase">
+                    Total Converti TND
+                  </span>
                   {formatTND(totalExpensesTND)} TND
                 </td>
                 <td></td>
